@@ -1,10 +1,10 @@
 <template>
     <h1>Events for Good</h1>
-    <div class="events">
+    <div v-if="events.length" class="events">
         <EventCard v-for="event in events" :key="event.id" :event="event" />
         <div class="pagination">
             <router-link
-                v-if="hasPrevPage"
+                v-if="hasPrevPage && !apiBusy"
                 id="page-prev"
                 :to="{ name: 'EventList', query: { page: this.page - 1 } }"
                 rel="prev"
@@ -12,7 +12,7 @@
                 &#60; Previuos
             </router-link>
             <router-link
-                v-if="hasNextPage"
+                v-if="hasNextPage && !apiBusy"
                 id="page-next"
                 :to="{ name: 'EventList', query: { page: this.page + 1 } }"
                 rel="next"
@@ -24,58 +24,56 @@
 </template>
 
 <script>
+import { mapState } from 'vuex'
 import EventCard from '@/components/EventCard.vue'
-import EventServices from '@/services/EventServices'
 
 export default {
     name: 'EventList',
     components: {
         EventCard,
     },
-    props: ['page'],
     data() {
         return {
-            events: null,
-            totalEvents: 0,
             defaultPerPage: 2,
+            apiBusy: false,
         }
     },
     computed: {
+        ...mapState('events', {
+            events: 'events',
+            totalEvents: 'totalEvents',
+        }),
         hasPrevPage() {
             return this.page > 1
         },
         hasNextPage() {
             const totalPages = Math.ceil(this.totalEvents / this.defaultPerPage)
-
             return totalPages > this.page
         },
+        page() {
+            return parseInt(this.$route.query.page) || 1
+        },
     },
-    beforeRouteEnter(routeTo, routeFrom, next) {
-        const DEFAULT_PER_PAGE = 2
-        const currentPage = parseInt(routeTo.query.page) || 1
-        return EventServices.getEvents(DEFAULT_PER_PAGE, currentPage)
-            .then(({ data, headers = {} }) => {
-                next((component) => {
-                    console.log(component)
-                    component.events = data
-                    component.totalEvents = headers['x-total-count']
+    created() {
+        this.getEvents()
+    },
+    beforeRouteUpdate(to, from, next) {
+        this.getEvents(parseInt(to.query.page)).then(() => {
+            next()
+        })
+    },
+    methods: {
+        getEvents(page = this.page, perPage = this.defaultPerPage) {
+            this.apiBusy = true
+            return this.$store
+                .dispatch('events/fetchEvents', { perPage, page })
+                .catch(() => {
+                    this.$router.push({ name: 'NetworkError' })
                 })
-            })
-            .catch(() => {
-                next({ name: 'NetworkError' })
-            })
-    },
-    beforeRouteUpdate(routeTo) {
-        const DEFAULT_PER_PAGE = 2
-        const currentPage = parseInt(routeTo.query.page) || 1
-        return EventServices.getEvents(DEFAULT_PER_PAGE, currentPage)
-            .then(({ data, headers = {} }) => {
-                this.events = data
-                this.totalEvents = headers['x-total-count']
-            })
-            .catch(() => {
-                return { name: 'NetworkError' }
-            })
+                .finally(() => {
+                    this.apiBusy = false
+                })
+        },
     },
 }
 </script>

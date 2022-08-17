@@ -12,15 +12,12 @@ import NotFound from '../views/NotFound.vue'
 import NetworkError from '../views/NetworkError.vue'
 
 import NProgress from 'nprogress'
-import GStore from '../store'
-import EventServices from '@/services/EventServices'
-
+import store from '@/store'
 const routes = [
     {
         path: '/',
         name: 'EventList',
         component: EventList,
-        props: (route) => ({ page: parseInt(route.query.page) || 1 }),
     },
     {
         path: '/about',
@@ -32,24 +29,6 @@ const routes = [
         name: 'EventLayout',
         props: true,
         component: EventLayout,
-        beforeEnter: (to) => {
-            return EventServices.getEvent(to.params.id)
-                .then(({ data: event }) => {
-                    GStore.event = event
-                })
-                .catch((error) => {
-                    if (error.response && error.response.status === 404) {
-                        return {
-                            name: '404Resource',
-                            params: { resource: 'event' },
-                        }
-                    } else {
-                        return {
-                            name: 'NetworkError',
-                        }
-                    }
-                })
-        },
         children: [
             {
                 path: '',
@@ -109,7 +88,7 @@ router.beforeEach((to, from) => {
     const isNeedAuth = true // if need user
 
     if (to.meta.requireAuth && isNeedAuth) {
-        showAndDeleteNotAuthUser()
+        showMessageNotAuthUser()
 
         if (from.href) {
             return false
@@ -124,10 +103,8 @@ router.afterEach(() => {
 
 export default router
 
-function showAndDeleteNotAuthUser() {
-    GStore.flashMessage = `Sorry, you are not authorized to view this page!`
-
-    setTimeout(() => {
-        GStore.flashMessage = ''
-    }, 3000)
+function showMessageNotAuthUser() {
+    store.dispatch('notification/showFlashMessage', {
+        message: 'Sorry, you are not authorized to view this page!',
+    })
 }

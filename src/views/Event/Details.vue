@@ -4,13 +4,14 @@
 </template>
 
 <script>
+import { mapState } from 'vuex'
+
 export default {
     name: 'EventDetails',
-    props: {
-        event: {
-            type: Object,
-            require: true,
-        },
+    computed: {
+        ...mapState('events', {
+            event: 'event',
+        }),
     },
 }
 </script>

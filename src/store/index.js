@@ -1,5 +1,12 @@
-import { reactive } from 'vue'
+import { createStore } from 'vuex'
+import user from './user'
+import events from './events'
+import notification from './notification'
 
-const GStore = reactive({ flashMessage: '', event: null })
-
-export default GStore
+export default createStore({
+    modules: {
+        user,
+        events,
+        notification,
+    },
+})
